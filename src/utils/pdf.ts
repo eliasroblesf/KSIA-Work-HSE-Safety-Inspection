@@ -80,28 +80,71 @@ export const generatePDF = async (report: InspectionReport) => {
 
     autoTable(doc, {
       startY: y,
-      head: [['Ref', 'Item', 'Status', 'Severity', 'Location / Finding']],
-      body: module.items.map(i => [
-        i.ref,
-        i.item,
-        i.status || '-',
-        i.severity || '-',
-        `${i.location}${i.finding ? ' / ' + i.finding : ''}`
-      ]),
+      head: [['Ref', 'Item', 'Status', 'L', 'C', 'RI', 'Category', 'Finding']],
+      body: module.items.map(i => {
+        const ri = (i.likelihood && i.consequence) ? i.likelihood * i.consequence : null;
+        const category = !ri ? '-' : 
+          ri <= 4 ? 'Low' : 
+          ri <= 9 ? 'Med' : 
+          ri <= 15 ? 'High' : 'Crit';
+        
+        return [
+          i.ref,
+          i.item,
+          i.status || '-',
+          i.likelihood || '-',
+          i.consequence || '-',
+          ri || '-',
+          category,
+          `${i.location}${i.finding ? ' / ' + i.finding : ''}`
+        ];
+      }),
       theme: 'grid',
       headStyles: { fillColor: [0, 86, 179], textColor: [255, 255, 255] },
-      styles: { fontSize: 8, cellPadding: 2 },
+      styles: { fontSize: 7, cellPadding: 1.5 },
       columnStyles: {
-        0: { cellWidth: 10 },
-        1: { cellWidth: 60 },
-        2: { cellWidth: 15, halign: 'center' },
-        3: { cellWidth: 15, halign: 'center' },
-        4: { cellWidth: 'auto' }
+        0: { cellWidth: 8 },
+        1: { cellWidth: 50 },
+        2: { cellWidth: 12, halign: 'center' },
+        3: { cellWidth: 8, halign: 'center' },
+        4: { cellWidth: 8, halign: 'center' },
+        5: { cellWidth: 8, halign: 'center' },
+        6: { cellWidth: 12, halign: 'center' },
+        7: { cellWidth: 'auto' }
       }
     });
 
     y = (doc as any).lastAutoTable.finalY + 10;
   }
+
+  // --- Risk Matrix Legend ---
+  if (y > 230) {
+    doc.addPage();
+    y = 20;
+  }
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('3. RISK ASSESSMENT MATRIX LEGEND (5x5)', 15, y);
+  y += 10;
+
+  autoTable(doc, {
+    startY: y,
+    head: [['Score Range', 'Risk Category', 'Action Required']],
+    body: [
+      ['1 - 4', 'LOW RISK', 'Routine maintenance / Monitoring'],
+      ['5 - 9', 'MEDIUM RISK', 'Planned corrective action required'],
+      ['10 - 15', 'HIGH RISK', 'Urgent action / Control measures needed'],
+      ['16 - 25', 'CRITICAL RISK', 'Immediate life threat / Stop work / AOC escalation']
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
+    styles: { fontSize: 8 },
+    columnStyles: {
+      1: { fontStyle: 'bold' }
+    }
+  });
+
+  y = (doc as any).lastAutoTable.finalY + 15;
 
   // --- CAP Section ---
   if (report.correctiveActions.length > 0) {
@@ -112,7 +155,7 @@ export const generatePDF = async (report: InspectionReport) => {
 
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('3. CORRECTIVE ACTION PLAN & DEFECT ESCALATION', 15, y);
+    doc.text('4. CORRECTIVE ACTION PLAN & DEFECT ESCALATION', 15, y);
     y += 10;
 
     autoTable(doc, {
@@ -142,7 +185,7 @@ export const generatePDF = async (report: InspectionReport) => {
 
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('4. FINAL AUDIT SUMMARY & FORMAL CLOSE-OUT', 15, y);
+  doc.text('5. FINAL AUDIT SUMMARY & FORMAL CLOSE-OUT', 15, y);
   y += 10;
 
   doc.setFontSize(9);

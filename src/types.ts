@@ -13,6 +13,8 @@ export interface ChecklistItem {
   criteria: string;
   status: InspectionStatus;
   severity: SeverityLevel;
+  likelihood: number | null; // 1-5 scale
+  consequence: number | null; // 1-5 scale
   location: string;
   finding: string;
   photos: string[]; // Base64 strings for offline storage

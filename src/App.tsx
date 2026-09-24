@@ -601,25 +601,71 @@ export default function App() {
                   </div>
 
                   {item.status === 'F' && (
-                    <div className="animate-in fade-in slide-in-from-top-2">
-                      <Label>Severity Level</Label>
-                      <div className="flex gap-1 p-1 bg-red-50 rounded-lg border border-red-100">
-                        {['L1', 'L2', 'L3'].map((s: any) => (
-                          <button
-                            key={s}
-                            onClick={() => updateModuleItem(index, itemIdx, { severity: s })}
-                            className={cn(
-                              'flex-1 py-2 text-xs font-bold rounded-md transition-all',
-                              item.severity === s 
-                                ? s === 'L1' ? 'bg-amber-400 text-white' 
-                                  : s === 'L2' ? 'bg-orange-500 text-white'
-                                  : 'bg-red-700 text-white'
-                                : 'text-red-300 hover:text-red-500'
-                            )}
-                          >
-                            {s}
-                          </button>
-                        ))}
+                    <div className="animate-in fade-in slide-in-from-top-2 space-y-4">
+                      <div className="bg-red-50/50 p-4 rounded-xl border border-red-100">
+                        <Label className="text-red-700">Risk Assessment Matrix (5x5)</Label>
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div>
+                            <Label className="text-[10px]">Likelihood (1-5)</Label>
+                            <select 
+                              value={item.likelihood || ''} 
+                              onChange={e => updateModuleItem(index, itemIdx, { likelihood: Number(e.target.value) })}
+                              className="w-full h-8 text-xs rounded border-zinc-200"
+                            >
+                              <option value="">Select...</option>
+                              {[1, 2, 3, 4, 5].map(v => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <Label className="text-[10px]">Consequence (1-5)</Label>
+                            <select 
+                              value={item.consequence || ''} 
+                              onChange={e => updateModuleItem(index, itemIdx, { consequence: Number(e.target.value) })}
+                              className="w-full h-8 text-xs rounded border-zinc-200"
+                            >
+                              <option value="">Select...</option>
+                              {[1, 2, 3, 4, 5].map(v => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        {item.likelihood && item.consequence && (
+                          <div className="mt-3 flex items-center justify-between bg-white p-2 rounded border border-red-100">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase">Risk Index: <span className="text-zinc-900">{item.likelihood * item.consequence}</span></span>
+                            <span className={cn(
+                              "text-[10px] font-black px-2 py-0.5 rounded uppercase",
+                              item.likelihood * item.consequence <= 4 ? "bg-emerald-100 text-emerald-700" :
+                              item.likelihood * item.consequence <= 9 ? "bg-amber-100 text-amber-700" :
+                              item.likelihood * item.consequence <= 15 ? "bg-orange-100 text-orange-700" :
+                              "bg-red-600 text-white"
+                            )}>
+                              {item.likelihood * item.consequence <= 4 ? "Low" :
+                               item.likelihood * item.consequence <= 9 ? "Medium" :
+                               item.likelihood * item.consequence <= 15 ? "High" : "Critical"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <Label>Severity Level (Legacy)</Label>
+                        <div className="flex gap-1 p-1 bg-red-50 rounded-lg border border-red-100">
+                          {['L1', 'L2', 'L3'].map((s: any) => (
+                            <button
+                              key={s}
+                              onClick={() => updateModuleItem(index, itemIdx, { severity: s })}
+                              className={cn(
+                                'flex-1 py-2 text-xs font-bold rounded-md transition-all',
+                                item.severity === s 
+                                  ? s === 'L1' ? 'bg-amber-400 text-white' 
+                                    : s === 'L2' ? 'bg-orange-500 text-white'
+                                    : 'bg-red-700 text-white'
+                                  : 'text-red-300 hover:text-red-500'
+                              )}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -787,9 +833,10 @@ export default function App() {
     
     let totalItems = 0;
     let compliant = 0;
-    let l1 = 0;
-    let l2 = 0;
-    let l3 = 0;
+    let lowRisk = 0;
+    let medRisk = 0;
+    let highRisk = 0;
+    let critRisk = 0;
 
     currentReport.modules.forEach(m => {
       m.items.forEach(i => {
@@ -797,9 +844,11 @@ export default function App() {
           totalItems++;
           if (i.status === 'P') compliant++;
           if (i.status === 'F') {
-            if (i.severity === 'L1') l1++;
-            if (i.severity === 'L2') l2++;
-            if (i.severity === 'L3') l3++;
+            const ri = (i.likelihood && i.consequence) ? i.likelihood * i.consequence : 0;
+            if (ri <= 4) lowRisk++;
+            else if (ri <= 9) medRisk++;
+            else if (ri <= 15) highRisk++;
+            else critRisk++;
           }
         }
       });
@@ -807,26 +856,52 @@ export default function App() {
 
     return (
       <div className="space-y-12">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100">
             <Label className="text-zinc-400">Total</Label>
-            <div className="text-3xl font-black text-zinc-900">{totalItems}</div>
+            <div className="text-2xl font-black text-zinc-900">{totalItems}</div>
           </div>
           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
             <Label className="text-emerald-500">Pass</Label>
-            <div className="text-3xl font-black text-emerald-600">{compliant}</div>
+            <div className="text-2xl font-black text-emerald-600">{compliant}</div>
+          </div>
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <Label className="text-blue-500">Low</Label>
+            <div className="text-2xl font-black text-blue-600">{lowRisk}</div>
           </div>
           <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-            <Label className="text-amber-500">L1</Label>
-            <div className="text-3xl font-black text-amber-600">{l1}</div>
+            <Label className="text-amber-500">Med</Label>
+            <div className="text-2xl font-black text-amber-600">{medRisk}</div>
           </div>
           <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-            <Label className="text-orange-500">L2</Label>
-            <div className="text-3xl font-black text-orange-600">{l2}</div>
+            <Label className="text-orange-500">High</Label>
+            <div className="text-2xl font-black text-orange-600">{highRisk}</div>
           </div>
           <div className="bg-red-50 p-4 rounded-xl border border-red-100">
-            <Label className="text-red-500">L3</Label>
-            <div className="text-3xl font-black text-red-600">{l3}</div>
+            <Label className="text-red-500">Crit</Label>
+            <div className="text-2xl font-black text-red-600">{critRisk}</div>
+          </div>
+        </div>
+
+        <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-200">
+          <h3 className="text-sm font-black text-zinc-900 mb-4 uppercase tracking-widest">Risk Assessment Matrix Key</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-3 rounded-lg border border-zinc-100">
+              <div className="text-[10px] font-black text-emerald-600 uppercase mb-1">Low (1-4)</div>
+              <p className="text-[10px] text-zinc-500">Routine maintenance & monitoring required.</p>
+            </div>
+            <div className="bg-white p-3 rounded-lg border border-zinc-100">
+              <div className="text-[10px] font-black text-amber-600 uppercase mb-1">Medium (5-9)</div>
+              <p className="text-[10px] text-zinc-500">Planned corrective action within SLA.</p>
+            </div>
+            <div className="bg-white p-3 rounded-lg border border-zinc-100">
+              <div className="text-[10px] font-black text-orange-600 uppercase mb-1">High (10-15)</div>
+              <p className="text-[10px] text-zinc-500">Urgent action & additional controls needed.</p>
+            </div>
+            <div className="bg-white p-3 rounded-lg border border-zinc-100">
+              <div className="text-[10px] font-black text-red-600 uppercase mb-1">Critical (16-25)</div>
+              <p className="text-[10px] text-zinc-500">Immediate threat. Stop work & escalate to AOC.</p>
+            </div>
           </div>
         </div>
 
